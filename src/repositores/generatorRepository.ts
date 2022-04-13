@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Generator } from '../model/Generator';
 
 // DTO - Data Transfer Object
@@ -12,31 +13,34 @@ interface IReadGenerateDTO {
 class GeneratorRepository {
   private useFilters: Generator[] = [];
 
-  private lastResult: number[] = [];
-
   private computedPossibilities: number[][] = [];
 
   constructor() {
     this.useFilters = [];
-    this.lastResult = this.getLastResult();
     this.computedPossibilities = this.getAllComputedPossibilities();
   }
 
-  getLastResult(): number[] {
+  async getLastResult(): Promise<any> {
     // Get this result by API
-    return [1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 16, 18, 23, 24, 25];
+    try {
+      const { data } = await axios.get('https://loteriascaixa-api.herokuapp.com/api/lotofacil/latest');
+      const game = data.dezenas.map((number: string) => Number(number));
+      return game;
+    } catch (err) {
+      return 'unavailable';
+    }
   }
 
   getAllComputedPossibilities(): number[][] {
     return [
-      [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25, 1, 3], // O: 3 // F: 11 // R: 11
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // O: 8 // F: 9 // R: 10
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 21, 22, 23, 24], // O: 7 // F: 12 // R: 10
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19], // O: 8  // F: 9 // R: 10
+      [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25, 1, 3], // O: 3 // F: 11 // R: 8
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // O: 8 // F: 9 // R: 8
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 21, 22, 23, 24], // O: 7 // F: 12 // R: 6
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19], // O: 8  // F: 9 // R: 9
     ];
   }
 
-  generate(): number[] {
+  async generate(): Promise<number[] | string> {
     const returnValues = [];
 
     let {
@@ -60,6 +64,13 @@ class GeneratorRepository {
     // It's not the value on the board, but the value of the indexes in the array
     const frames = [0, 1, 2, 3, 4, 5, 9, 10, 14, 15, 19, 20, 21, 22, 23, 24];
 
+    // Retrieve last Result
+    const lastResult = await this.getLastResult();
+
+    if (lastResult === 'unavailable') {
+      return lastResult;
+    }
+
     const games = this.computedPossibilities.filter(
       (game) => (
         // Amount of Odds Selected By the User
@@ -67,7 +78,7 @@ class GeneratorRepository {
         // Amount of choices in the frame
         && (game.filter((number) => frames.indexOf(number - 1) >= 0).length === frame)
         // Amount of repeated from the last oficial game
-        && (game.filter((number) => this.lastResult.includes(number)).length === repeated)
+        && (game.filter((number) => lastResult.includes(number)).length === repeated)
       ),
     );
 
@@ -76,7 +87,7 @@ class GeneratorRepository {
     return returnValues;
   }
 
-  list(filters: IReadGenerateDTO): number[] {
+  async list(filters: IReadGenerateDTO): Promise<number[] | string> {
     const searchFilters = new Generator();
 
     Object.assign(searchFilters, {
@@ -91,7 +102,7 @@ class GeneratorRepository {
 
     this.useFilters.push(searchFilters);
 
-    const returnValues = this.generate();
+    const returnValues = await this.generate();
 
     return returnValues;
   }
