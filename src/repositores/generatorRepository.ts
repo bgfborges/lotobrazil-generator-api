@@ -31,13 +31,38 @@ class GeneratorRepository {
     }
   }
 
+  generateNewGame(amount: number, min: number, max: number): number[][] {
+    const allGames = [];
+    let probabilities = [];
+
+    for (let game = 0; game < amount;) {
+      for (let i = 0; i < 15;) {
+        const num = Math.floor(Math.random() * (max - min + 1) + min);
+        const exist = probabilities.find((item) => item === num);
+
+        if (!exist) {
+          probabilities.push(num);
+          i += 1;
+        }
+      }
+
+      probabilities.sort((a, b) => a - b);
+
+      allGames.push(probabilities);
+
+      probabilities = [];
+
+      game += 1;
+    }
+
+    return allGames;
+  }
+
+  // Computed Possibilities for the Next Lottery
   getAllComputedPossibilities(): number[][] {
-    return [
-      [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25, 1, 3], // O: 3 // F: 11 // R: 8
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // O: 8 // F: 9 // R: 8
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 21, 22, 23, 24], // O: 7 // F: 12 // R: 6
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19], // O: 8  // F: 9 // R: 9
-    ];
+    const probabilities = this.generateNewGame(2000, 1, 25);
+
+    return probabilities;
   }
 
   async generate(): Promise<number[] | string> {
@@ -49,7 +74,7 @@ class GeneratorRepository {
       repeated,
     } = this.useFilters[0].filters;
 
-    if (!odd) { odd = 3; }
+    if (!odd) { odd = 7; }
     if (!frame) { frame = 11; }
     if (!repeated) { repeated = 9; }
 
